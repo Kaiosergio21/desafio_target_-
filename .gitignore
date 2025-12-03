@@ -1,0 +1,36 @@
+# Compiled binaries (DLLs, EXEs, etc.)
+bin/
+obj/
+
+# VS Code settings
+.vscode/
+
+# Rider & IntelliJ configs
+.idea/
+
+# Dotnet local tools
+.dotnet/
+
+# NuGet packages
+packages/
+*.nupkg
+
+# Logs
+*.log
+
+# User-specific files
+*.user
+*.userprefs
+
+# Test results
+TestResults/
+*.coverage
+*.coveragexml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Caso NÃO queira subir arquivos JSON de dados para o GitHub:
+# Descomente a linha abaixo:
+# Data/*.json
