@@ -1,47 +1,14 @@
 using System.Globalization;
+using System.Text.Json;
+using Target.Models;
 
 namespace Target.Services
 {
     public class JurosService
     {
-        // ===========================================
-        //  MÉTODO 1 — Formata datas digitadas
-        // ===========================================
-        public string FormatarData(string entrada)
-        {
-            if (string.IsNullOrWhiteSpace(entrada))
-                throw new ArgumentException("Data inválida");
+        private const string CaminhoLog = "Data/log_dividas.json";
 
-            string numeros = new string(entrada.Where(char.IsDigit).ToArray());
-
-            if (numeros.Length != 8)
-                throw new ArgumentException("Data deve conter 8 dígitos");
-
-            return $"{numeros.Substring(0, 2)}/{numeros.Substring(2, 2)}/{numeros.Substring(4, 4)}";
-        }
-
-        // ===========================================
-        //  MÉTODO 2 — Calcula juros de atraso (USADO NO TESTE)
-        // ===========================================
-        public (int dias, double juros, double total) CalcularJurosAtraso(double valor, DateTime venc)
-        {
-            if (valor <= 0)
-                throw new ArgumentException("Valor deve ser maior que zero");
-
-            int diasAtraso = (DateTime.Today - venc).Days;
-
-            if (diasAtraso <= 0)
-                return (0, 0, valor);
-
-            double juros = valor * 0.025 * diasAtraso;
-            double total = valor + juros;
-
-            return (diasAtraso, juros, total);
-        }
-
-        // ===========================================
-        //  SEU MÉTODO ORIGINAL (USO NO CONSOLE)
-        // ===========================================
+        // Método usado no console
         public void CalcularJuros()
         {
             Console.Write("Valor da conta: ");
@@ -53,7 +20,6 @@ namespace Target.Services
                 return;
             }
 
-            Console.Write("=== exemplos de formatos válidos ===\n\n01012025\n01-01-2025\n01 01 2025\n01/01/2025\n\n");
             Console.Write("Data de vencimento (DD/MM/AAAA): ");
             string? entradaData = Console.ReadLine();
 
@@ -65,17 +31,9 @@ namespace Target.Services
 
             // Remove tudo que não é número
             string apenasNumeros = new string(entradaData.Where(char.IsDigit).ToArray());
-
-            // Formatação automática
             if (apenasNumeros.Length == 8)
-            {
-                entradaData =
-                    $"{apenasNumeros.Substring(0, 2)}/" +
-                    $"{apenasNumeros.Substring(2, 2)}/" +
-                    $"{apenasNumeros.Substring(4, 4)}";
-            }
+                entradaData = $"{apenasNumeros.Substring(0, 2)}/{apenasNumeros.Substring(2, 2)}/{apenasNumeros.Substring(4, 4)}";
 
-            // Converte para DateTime
             if (!DateTime.TryParseExact(
                     entradaData,
                     "dd/MM/yyyy",
@@ -94,12 +52,67 @@ namespace Target.Services
             if (resultado.dias == 0)
             {
                 Console.WriteLine("Conta dentro do prazo, sem juros.");
-                return;
+            }
+            else
+            {
+                Console.WriteLine($"\nDias em atraso: {resultado.dias}");
+                Console.WriteLine($"Juros: R${resultado.juros:F2}");
+                Console.WriteLine($"Total atualizado: R${resultado.total:F2}");
             }
 
-            Console.WriteLine($"\nDias em atraso: {resultado.dias}");
-            Console.WriteLine($"Juros: R${resultado.juros:F2}");
-            Console.WriteLine($"Total atualizado: R${resultado.total:F2}");
+            // ======================
+            // Registrar log
+            // ======================
+            DividasRoot log;
+
+            if (File.Exists(CaminhoLog))
+            {
+                string jsonLog = File.ReadAllText(CaminhoLog);
+                log = JsonSerializer.Deserialize<DividasRoot>(jsonLog) ?? new DividasRoot();
+            }
+            else
+            {
+                log = new DividasRoot();
+            }
+
+            log.Dividas.Add(new DividaLog
+            {
+                Id = Guid.NewGuid().ToString(),
+                ValorOriginal = valor,
+                DataVencimento = entradaData,
+                DiasAtraso = resultado.dias,
+                Juros = resultado.juros,
+                TotalAtualizado = resultado.total,
+                DataHoraCalculo = DateTime.Now
+            });
+
+            // 🔥 Importante: garantir que a pasta exista
+            Directory.CreateDirectory("Data");
+
+            // Salvar log
+            File.WriteAllText(
+                CaminhoLog,
+                JsonSerializer.Serialize(log, new JsonSerializerOptions { WriteIndented = true })
+            );
+
+            Console.WriteLine("Dívida registrada no log com sucesso!");
+        }
+
+        // Método de cálculo
+        public (int dias, double juros, double total) CalcularJurosAtraso(double valor, DateTime venc)
+        {
+            if (valor <= 0)
+                throw new ArgumentException("Valor deve ser maior que zero");
+
+            int diasAtraso = (DateTime.Today - venc).Days;
+
+            if (diasAtraso <= 0)
+                return (0, 0, valor);
+
+            double juros = valor * 0.025 * diasAtraso;
+            double total = valor + juros;
+
+            return (diasAtraso, juros, total);
         }
     }
 }

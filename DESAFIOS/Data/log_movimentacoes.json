@@ -1,0 +1,12 @@
+{
+  "movimentacoes": [
+    {
+      "Id": "de17eeb0-29ad-4e0f-ad83-5637981aaf62",
+      "CodigoProduto": 103,
+      "DescricaoProduto": "Borracha Branca",
+      "Tipo": "E",
+      "Quantidade": 234,
+      "DataHora": "2025-12-03T21:14:01.8921466-03:00"
+    }
+  ]
+}

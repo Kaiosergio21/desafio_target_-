@@ -5,24 +5,34 @@ namespace Target.Services
 {
     public class EstoqueService
     {
-        // Método principal responsável por realizar movimentações de estoque
+        private const string CaminhoEstoque = "Data/estoque.json";
+        private const string CaminhoLog = "Data/log_movimentacoes.json";
+
         public void Movimentar()
         {
-            // Lê o conteúdo do arquivo JSON que armazena o estoque
-            string json = File.ReadAllText("Data/estoque.json");
+            // ======================
+            // Valida se arquivos existem
+            // ======================
+            if (!File.Exists(CaminhoEstoque))
+            {
+                Console.WriteLine("Arquivo de estoque não encontrado!");
+                return;
+            }
 
-            // Converte o JSON em objeto C# e evita null reference
+            // ======================
+            // Carrega estoque
+            // ======================
+            string json = File.ReadAllText(CaminhoEstoque);
+
             var dados = JsonSerializer.Deserialize<EstoqueRoot>(json);
 
             if (dados == null || dados.estoque == null)
             {
-                Console.WriteLine("Erro ao carregar arquivo de estoque.");
+                Console.WriteLine("Erro ao carregar o estoque. JSON pode estar vazio ou inválido.");
                 return;
             }
 
             Console.WriteLine("\n===== MOVIMENTAÇÃO DE ESTOQUE =====");
-
-            // Solicita ao usuário o código do produto
             Console.Write("Código do produto: ");
             string? entradaCodigo = Console.ReadLine();
 
@@ -32,25 +42,13 @@ namespace Target.Services
                 return;
             }
 
-         // Gera ID único
-            string idMov = Guid.NewGuid().ToString();
-
-            // Procura o produto no JSON pelo código informado
             var produto = dados.estoque.FirstOrDefault(p => p.codigoProduto == codigo);
-
             if (produto == null)
             {
                 Console.WriteLine("Produto não encontrado.");
                 return;
             }
 
-              // Exibe dados finais
-            Console.WriteLine("\nMovimentação registrada!");
-            Console.WriteLine($"ID: {idMov}");
-            Console.WriteLine($"Produto: {produto.descricaoProduto}");
-            Console.WriteLine($"Novo estoque: {produto.estoque}");
-
-            // Pergunta se é entrada ou saída
             Console.Write("Entrada (E) ou Saída (S)? ");
             string? tipo = Console.ReadLine()?.ToUpper();
 
@@ -60,7 +58,6 @@ namespace Target.Services
                 return;
             }
 
-            // Lê quantidade de forma segura
             Console.Write("Quantidade: ");
             string? entradaQtd = Console.ReadLine();
 
@@ -70,24 +67,65 @@ namespace Target.Services
                 return;
             }
 
-   
+            if (qtd <= 0)
+            {
+                Console.WriteLine("A quantidade deve ser maior que zero!");
+                return;
+            }
 
-            // Aplica movimentação
-            if (tipo == "E")
-                produto.estoque += qtd;
-            else
-                produto.estoque -= qtd;
+            if (tipo == "S" && qtd > produto.estoque)
+            {
+                Console.WriteLine("Quantidade maior que o estoque disponível!");
+                return;
+            }
 
-            // Exibe dados finais
-            Console.WriteLine("\nMovimentação registrada!");
-            Console.WriteLine($"ID: {idMov}");
+            // ======================
+            // Atualiza estoque
+            // ======================
+            if (tipo == "E") produto.estoque += qtd;
+            else produto.estoque -= qtd;
+
+            string idMov = Guid.NewGuid().ToString();
+
+            Console.WriteLine("\nMovimentação registrada com sucesso!");
+            Console.WriteLine($"ID Movimentação: {idMov}");
             Console.WriteLine($"Produto: {produto.descricaoProduto}");
             Console.WriteLine($"Novo estoque: {produto.estoque}");
 
-            // Salva o JSON de volta
-            File.WriteAllText(
-                "Data/estoque.json",
+            File.WriteAllText(CaminhoEstoque,
                 JsonSerializer.Serialize(dados, new JsonSerializerOptions { WriteIndented = true })
+            );
+
+            // ======================
+            // Carrega ou cria log
+            // ======================
+            MovimentacoesRoot log;
+
+            if (File.Exists(CaminhoLog))
+            {
+                string jsonLog = File.ReadAllText(CaminhoLog);
+                log = JsonSerializer.Deserialize<MovimentacoesRoot>(jsonLog) ?? new MovimentacoesRoot();
+            }
+            else
+            {
+                log = new MovimentacoesRoot();
+            }
+
+            // ======================
+            // Registra a movimentação
+            // ======================
+            log.movimentacoes.Add(new Movimentacao
+            {
+                Id = idMov,
+                CodigoProduto = produto.codigoProduto,
+                DescricaoProduto = produto.descricaoProduto,
+                Tipo = tipo,
+                Quantidade = qtd,
+                DataHora = DateTime.Now
+            });
+
+            File.WriteAllText(CaminhoLog,
+                JsonSerializer.Serialize(log, new JsonSerializerOptions { WriteIndented = true })
             );
         }
     }

@@ -1,0 +1,13 @@
+{
+  "Dividas": [
+    {
+      "Id": "7e9a1e22-900e-49a4-a764-4243dbf34bb5",
+      "ValorOriginal": 209,
+      "DataVencimento": "01/01/2025",
+      "DiasAtraso": 336,
+      "Juros": 1755.6000000000001,
+      "TotalAtualizado": 1964.6000000000001,
+      "DataHoraCalculo": "2025-12-03T21:08:50.0847846-03:00"
+    }
+  ]
+}
